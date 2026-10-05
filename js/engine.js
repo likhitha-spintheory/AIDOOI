@@ -216,15 +216,18 @@ function budgetPerformance(total, range, ceiling) {
 }
 
 /** AID-LOG-010 §9 — the Composition Score. */
-export function scoreComposition(items, slots, range, ceiling) {
+export function scoreComposition(items, slots, range, ceiling, minimumSpend = 0) {
   const total = items.reduce((t, i) => t + i.offer.sellingPrice * i.qty, 0);
   const pmq = productMatchQuality(items);
   const h = harmony(items);
   const comp = completeness(items, slots);
   const bp = budgetPerformance(total, range, ceiling);
 
-  if (comp < 0 || bp < 0 || items.some(i => i.total < MIN_PRODUCT_MATCH)) {
-    return { valid: false, total, reason: comp < 0 ? 'Essential function incomplete' : bp < 0 ? 'Over budget ceiling' : 'Product below minimum match' };
+  if (comp < 0 || bp < 0 || total < minimumSpend || items.some(i => i.total < MIN_PRODUCT_MATCH)) {
+    return { valid: false, total, reason: comp < 0 ? 'Essential function incomplete'
+      : bp < 0 ? 'Over budget maximum'
+      : total < minimumSpend ? 'Below budget minimum'
+      : 'Product below minimum match' };
   }
   const score = Math.round(pmq * 0.40 + h.total * 0.30 + comp * 0.20 + bp * 0.10);
   return {
@@ -262,7 +265,7 @@ const OBJECTIVES = {
 };
 
 /* Build one option for a given objective. */
-function buildOption(key, slots, ctx, range, ceiling, avoidAnchors) {
+function buildOption(key, slots, ctx, range, ceiling, avoidAnchors, minimumSpend = 0) {
   const obj = OBJECTIVES[key];
   const items = [];
   const rejected = [];
@@ -317,10 +320,10 @@ function buildOption(key, slots, ctx, range, ceiling, avoidAnchors) {
 
   /* --- Budget exceeds essential composition needs, AID-LOG-008 §6 ---
      Improve Product Quality → Scale/Fit → Material/Design Match, by SWAPPING
-     products only. Never add products merely to consume available budget, and
-     never apply this to Best Value, whose objective is quality per dirham. */
-  if (key !== 'bestValue') {
-    const floor = ceiling * 0.82;
+     products only. Never add products merely to consume available budget.
+     A customer-selected minimum applies to every objective, including Best Value. */
+  if (key !== 'bestValue' || minimumSpend > 0) {
+    const floor = minimumSpend || ceiling * 0.82;
     for (let pass = 0; pass < 40 && totalOf() < floor; pass++) {
       let best = null;
       for (const it of items) {
@@ -338,11 +341,11 @@ function buildOption(key, slots, ctx, range, ceiling, avoidAnchors) {
     }
   }
 
-  const scored = scoreComposition(items, slots, range, ceiling);
+  const scored = scoreComposition(items, slots, range, ceiling, minimumSpend);
   return {
     key, label: obj.label, blurb: obj.blurb,
     items, droppedSlots: rejected, ...scored,
-    ceiling
+    ceiling, minimumSpend
   };
 }
 
@@ -360,6 +363,8 @@ export function runRecommendation(project) {
      (AID-LOG-007 §4); a standalone room uses its tier table. */
   const range = project.budgetOverride || roomBudget(project.pathId, cls, tierIdx);
   const ceilingBase = range[1];
+  const minimumSpend = Number(project.minimumSpendAED) || 0;
+  const premiumCeiling = minimumSpend ? ceilingBase : ceilingBase * (1 + PREMIUM_STRETCH);
 
   const room = {
     area: roomArea, cls,
@@ -380,7 +385,7 @@ export function runRecommendation(project) {
   };
 
   const slots = prepare(ceilingBase);
-  const premiumSlots = prepare(ceilingBase * (1 + PREMIUM_STRETCH));
+  const premiumSlots = prepare(premiumCeiling);
 
   /* Hard constraint surface: an essential slot with no eligible candidate
      must be reported, never silently dropped (AID-LOG-002 §12). */
@@ -397,9 +402,10 @@ export function runRecommendation(project) {
   const usedAnchors = new Set();
   for (const key of ['bestOverall', 'bestValue', 'bestStyle', 'premium']) {
     const isPremium = key === 'premium';
-    const ceiling = isPremium ? ceilingBase * (1 + PREMIUM_STRETCH) : ceilingBase;
+    const ceiling = isPremium ? premiumCeiling : ceilingBase;
     const useSlots = isPremium ? premiumSlots : slots;
-    const opt = buildOption(key, useSlots, ctx, range, ceiling, key === 'bestOverall' ? null : usedAnchors);
+    const opt = buildOption(key, useSlots, ctx, range, ceiling,
+      key === 'bestOverall' ? null : usedAnchors, minimumSpend);
     if (!opt.valid) { opt.suppressed = true; options.push(opt); continue; }
     opt.slots = useSlots;
     const anchor = opt.items.find(i => i.slot.role === 'anchor');
@@ -421,6 +427,8 @@ export function runRecommendation(project) {
   return {
     runId: 'RUN-' + Date.now().toString(36).toUpperCase(),
     status: valid.length ? (valid.length < 4 ? 'Limited Inventory' : 'Completed') : 'Failed',
+    reason: valid.length ? null : (options.find(o => o.reason)?.reason ||
+      'No complete composition satisfies the selected budget range and quality requirements.'),
     cls, room, range, ceiling: ceilingBase, slots,
     options: valid,
     suppressed: options.filter(o => o.suppressed || !o.valid)
@@ -447,7 +455,7 @@ export function applyReplacement(run, option, itemKey, candidate) {
 
   const trial = option.items.slice();
   trial[idx] = { ...candidate, slot, qty: slot.qty };
-  const scored = scoreComposition(trial, option.slots || run.slots, run.range, option.ceiling);
+  const scored = scoreComposition(trial, option.slots || run.slots, run.range, option.ceiling, option.minimumSpend);
   if (!scored.valid)
     return { ok: false, reason: scored.reason || `Revised composition score ${scored.score} is below ${MIN_COMPOSITION}` };
 
@@ -465,7 +473,8 @@ export function removeItem(run, option, itemKey) {
     return { ok: false, reason: 'This product covers an essential function and cannot be removed' };
   const trial = option.items.slice();
   trial.splice(idx, 1);
-  const scored = scoreComposition(trial, option.slots || run.slots, run.range, option.ceiling);
+  const scored = scoreComposition(trial, option.slots || run.slots, run.range, option.ceiling, option.minimumSpend);
+  if (!scored.valid) return { ok: false, reason: scored.reason };
   option.items = trial;
   Object.assign(option, scored, { valid: true });   // removal is a customer choice, not a rebuild
   option.modified = true;
@@ -473,12 +482,12 @@ export function removeItem(run, option, itemKey) {
 }
 
 /* ---------------- AID-SPC-009 — Individual Product path ---------------- */
-export function rankIndividual({ type, branch, style, colour, tier }) {
-  const range = priceRange(type, branch, tier) || [0, Infinity];
+export function rankIndividual({ type, branch, style, colour, tier, range: customRange }) {
+  const range = customRange || priceRange(type, branch, tier) || [0, Infinity];
   const slot = { type, branch, w: null, role: 'anchor', qty: 1, allocated: (range[0] + range[1]) / 2, key: type + '#0' };
   const ctx = { style, colour, spec: { capacity: branch, bedSize: branch }, room: null };
   const pool = slotCandidates(slot, ctx)
-    .filter(c => c.offer.sellingPrice >= range[0] * 0.9 && c.offer.sellingPrice <= range[1] * 1.1);
+    .filter(c => c.offer.sellingPrice >= range[0] && c.offer.sellingPrice <= range[1]);
   return { range, slot, results: pool.filter(c => c.eligible), rejected: pool.filter(c => !c.eligible) };
 }
 
@@ -496,7 +505,8 @@ export function runProject(project) {
     return { ...m, cls, mid: (r[0] + r[1]) / 2 };
   });
   const sum = weights.reduce((t, m) => t + m.mid, 0) || 1;
-  const projectCeiling = Number(project.projectBudget);
+  const projectCeiling = Number(project.budgetRangeAED?.[1] || project.projectBudget);
+  const projectMinimum = Number(project.minimumBudgetAED) || 0;
 
   const modules = weights.map(m => {
     const share = (m.mid / sum) * projectCeiling;
@@ -506,7 +516,8 @@ export function runProject(project) {
       style: project.style,
       colour: project.colour,
       /* The allocated share is the module's budget, not the generic room tier. */
-      budgetOverride: [share * 0.72, share],
+      budgetOverride: [share * (projectMinimum / projectCeiling), share],
+      minimumSpendAED: share * (projectMinimum / projectCeiling),
       spec: {
         area: m.area,
         length: Math.sqrt(m.area * 1.35), width: Math.sqrt(m.area / 1.35),
@@ -521,13 +532,19 @@ export function runProject(project) {
     return t + (o ? o.total : 0);
   }, 0);
 
+  const withinBudget = total >= projectMinimum && total <= projectCeiling;
+  const modulesValid = modules.every(m => m.run.options && m.run.options.length);
   return {
     runId: 'PRJ-' + Date.now().toString(36).toUpperCase(),
-    status: modules.every(m => m.run.options && m.run.options.length) ? 'Completed' : 'Limited Inventory',
+    status: modulesValid && withinBudget ? 'Completed' : 'Limited Inventory',
     projectCeiling, modules, total,
-    constraint: total > projectCeiling
-      ? 'Budget Constraint: the selected total budget cannot cover every essential room requirement at this tier.'
-      : null
+    constraint: !modulesValid
+      ? 'Budget Constraint: one or more rooms have no valid composition in the selected range.'
+      : total < projectMinimum
+        ? 'Budget Constraint: no valid set of room compositions reaches the selected minimum.'
+        : total > projectCeiling
+          ? 'Budget Constraint: the selected maximum cannot cover every essential room requirement.'
+          : null
   };
 }
 

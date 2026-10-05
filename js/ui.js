@@ -19,11 +19,11 @@ export const esc = s => String(s == null ? '' : s)
    No eyebrow/roof mark above the squares. */
 export const brandMark = (size = 32) => `
 <svg class="mark" viewBox="0 0 48 52" width="${size}" height="${size * 52 / 48}" aria-hidden="true">
-  <path d="M8 27a16 16 0 0 1 32 0v4a2 2 0 0 1-2 2h-2.4a2 2 0 0 1-2-2v-4a11.6 11.6 0 0 0-23.2 0v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="#12345B"/>
-  <rect x="16.6" y="35" width="6.6" height="6.6" rx="1.5" fill="#12345B"/>
-  <rect x="24.8" y="35" width="6.6" height="6.6" rx="1.5" fill="#12345B"/>
-  <rect x="16.6" y="43.4" width="6.6" height="4.6" rx="1.4" fill="#B7A78F"/>
-  <rect x="24.8" y="43.4" width="6.6" height="4.6" rx="1.4" fill="#B7A78F"/>
+  <path d="M8 27a16 16 0 0 1 32 0v4a2 2 0 0 1-2 2h-2.4a2 2 0 0 1-2-2v-4a11.6 11.6 0 0 0-23.2 0v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="var(--navy)"/>
+  <rect x="16.6" y="35" width="6.6" height="6.6" rx="1.5" fill="var(--navy)"/>
+  <rect x="24.8" y="35" width="6.6" height="6.6" rx="1.5" fill="var(--navy)"/>
+  <rect x="16.6" y="43.4" width="6.6" height="4.6" rx="1.4" fill="var(--beige)"/>
+  <rect x="24.8" y="43.4" width="6.6" height="4.6" rx="1.4" fill="var(--beige)"/>
 </svg>`;
 
 /* ---------- Minimal outline icon family (AID-DATA-015 §6) ---------- */
@@ -170,7 +170,7 @@ export function roomPlan(option, room) {
     const soft = ['floor', 'wall', 'ceiling'].includes(s.zone);
     return `<g class="hotspot" data-item="${esc(s.it.slot.key)}" tabindex="0" role="button"
        aria-label="${esc(p.name)}"><title>${esc(p.name)} · ${esc(p.id)} · ${p.width}×${p.depth} cm</title>
-      ${soft ? '' : `<rect x="${(s.x + 2).toFixed(1)}" y="${(s.y + 3).toFixed(1)}" width="${s.w.toFixed(1)}" height="${s.h.toFixed(1)}" rx="4" fill="#12345B" opacity=".09"/>`}
+      ${soft ? '' : `<rect x="${(s.x + 2).toFixed(1)}" y="${(s.y + 3).toFixed(1)}" width="${s.w.toFixed(1)}" height="${s.h.toFixed(1)}" rx="4" fill="#4D4C34" opacity=".09"/>`}
       ${planGlyph(p.type, s.x, s.y, s.w, s.h, p)}</g>`;
   }).join('');
 
@@ -187,7 +187,7 @@ export function roomPlan(option, room) {
   </defs>
   <rect x="-10" y="-10" width="${W + 20}" height="${H + 20}" rx="4" fill="#ECE6DC"/>
   <rect x="0" y="0" width="${W}" height="${H}" fill="url(#plank)"/>
-  <path d="M0 0h${W}v${H}h${-W}z" fill="none" stroke="#12345B" stroke-width="2" opacity=".5"/>
+  <path d="M0 0h${W}v${H}h${-W}z" fill="none" stroke="#4D4C34" stroke-width="2" opacity=".5"/>
   <path d="M${W * 0.08} 0a${W * 0.14} ${W * 0.14} 0 0 0 ${W * 0.14} ${W * 0.14}" fill="none" stroke="#C9C1B4" stroke-width="1.4" stroke-dasharray="5 4"/>
   <path d="M${W * 0.08} -10v20" stroke="#ECE6DC" stroke-width="5"/>
   <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="13" fill="#6B7280">

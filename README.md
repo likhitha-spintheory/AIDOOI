@@ -11,7 +11,7 @@ and settlement — runs in the browser.
 ### The one command you need
 
 ```bash
-cd "/Users/rahul/Downloads/likhi project/mvp"
+cd "/Users/Downloads/likhi project/mvp"
 python3 -m http.server 8777
 ```
 
@@ -55,33 +55,27 @@ ipconfig getifaddr en0          # macOS, e.g. 192.168.1.24
 ## 2. A five-minute demo path
 
 This is the route to walk a client through. It touches all eight workflows.
+The progress bar stays visible throughout the customer journey and highlights the current page.
 
 | # | Do this | What to point out |
 |---|---|---|
-| 1 | Home → **Find my best match** | 601 verified products and 851 live seller offers behind the page |
+| 1 | Home → **Find my best match** | Start a sample room-furnishing journey |
 | 2 | Choose **Living Room** | One entry question routes into one of eight paths (AID-SPC-001) |
-| 3 | Enter length `5.5`, width `4.5` | 24.8 m² → size classification **Medium**, derived by the system, never chosen by the customer |
+| 3 | Enter length `5.5`, width `4.5` | 24.8 m² → size classification **Medium**, derived by the system, never chosen by the customer. Optionally upload a room photo or floor plan from your device or camera. |
 | 4 | Pick **Scandinavian** and **Beige** | Controlled vocabularies, not free text (AID-DATA-009 / 007) |
-| 5 | Pick the **Standard** budget card | Each tier card carries its AED range and a representative product image |
-| 6 | **Generate my recommendations** | Four complete options, each with its composition score |
-| 7 | **View & visualize** on Best Overall | Measured plan drawn to scale; toggle to **Gallery** |
-| 8 | Click any item on the plan | The Product Card opens with the full AID-LOG-009 score breakdown |
-| 9 | **Replace** a product | Only eligible alternatives; the composition is revalidated before it applies |
-| 10 | **Remove** a non-essential item | Total recalculates instantly; essentials refuse to be removed |
-| 11 | **Request viewing** → register | Guests explore freely; registration is required only here |
-| 12 | Confirm sellers → pay deposit | 5% of the selected products, capped at AED 500 |
-| 13 | **Record attendance** → checkout | The deposit becomes a credit against the order |
-| 14 | **Pay** | One payment to AIDOOi, split into seller orders with locked snapshots |
-| 15 | Advance a line to **Receipt Confirmed** | It becomes settlement eligible |
-| 16 | **Report issue** on another line | Settlement goes On Hold |
-| 17 | Scroll to the settlement table | Gross − commission − adjustments = net payable, per partner |
-| 18 | **Engine** in the top navigation | Every MVP acceptance gate, evaluated live |
-
+| 5 | Choose INR or AED, then set a minimum and maximum budget | Product prices and totals use the selected currency; conversion uses the prototype's approximate fixed rate of ₹23 per AED |
+| 6 | **Generate my recommendations** | A small set of complete room ideas to compare |
+| 7 | Browse the room ideas | Compare the sample furniture sets and choose one to review |
+| 8 | Select what you want | The key item starts selected; add or remove products to make your own set |
+| 9 | **Preview room** | See the selected furniture in a measurement-based 3D-style room, or as an approximate overlay on your uploaded photo |
+| 10 | **Continue** → register | Only selected products appear in the simple viewing summary |
+| 11 | Confirm availability → pay deposit | 5% of selected products, capped at AED 500 |
+| 12 | Mark viewing complete → checkout | The deposit becomes a credit against the selected order |
+| 13 | **Pay** | Place the sample order for selected products |
 Things worth trying off the happy path:
 
 - A **tiny room** (2.8 × 2.6 living room) — watch the composition shrink rather than break.
-- A **Luxury** tier — Premium Choice is suppressed with a stated reason, because no meaningful
-  upgrade exists. The system refuses to manufacture a fourth option.
+- A different budget — the available room ideas change with the inputs.
 - **Villa** with 4 bedrooms and 2 floors — eight coordinated room modules from one budget.
 - **Individual Product** → Premium Sofa — a deliberately short list, because products below match 60
   are never shown.
@@ -138,7 +132,7 @@ current project are stored locally — nothing is sent anywhere.
 | Blank page, 404 on `js/app.js` | Server started from the wrong folder | `cd` into `mvp/` first |
 | Fonts look wrong | Google Fonts blocked or offline | Harmless — the system fallbacks are set |
 | Nothing happens on a button | Stale cached module | Hard reload: `Cmd/Ctrl + Shift + R` |
-| "Generate" stays greyed out | A required input is missing | Complete dimensions, any conditional input, and a budget tier |
+| "Generate" stays greyed out | A required input is missing or the budget range is invalid | Complete dimensions/conditional inputs and enter a positive minimum plus a greater maximum budget |
 
 ---
 
